@@ -11,9 +11,5 @@
       "src": "/api/(.*)",
       "dest": "/api/$1"
     }
-  ],
-  "env": {
-    "TIKTOK_CLIENT_KEY": "@tiktok-client-key",
-    "TIKTOK_CLIENT_SECRET": "@tiktok-client-secret"
-  }
+  ]
 }
