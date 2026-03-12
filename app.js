@@ -90,20 +90,46 @@ async function handleOAuthCallback() {
 async function exchangeCodeForToken(code) {
     const backendUrl = CONFIG.BACKEND_URL || 'https://ghost-phantom.vercel.app';
     
-    const response = await fetch(`${backendUrl}/api/auth`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            code: code,
-            redirect_uri: CONFIG.REDIRECT_URI
-        })
-    });
+    console.log('=== Token Exchange Debug ===');
+    console.log('Backend URL:', backendUrl);
+    console.log('Code received:', code.substring(0, 20) + '...');
+    console.log('Redirect URI:', CONFIG.REDIRECT_URI);
     
-    const data = await response.json();
+    let response;
+    try {
+        console.log('Sending POST request to:', `${backendUrl}/api/auth`);
+        response = await fetch(`${backendUrl}/api/auth`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                code: code,
+                redirect_uri: CONFIG.REDIRECT_URI
+            })
+        });
+        console.log('Response received. Status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+    } catch (fetchError) {
+        console.error('FETCH FAILED:', fetchError);
+        console.error('Error name:', fetchError.name);
+        console.error('Error message:', fetchError.message);
+        throw new Error(`Network request failed: ${fetchError.message}. Check browser console for details.`);
+    }
+    
+    let data;
+    try {
+        data = await response.json();
+        console.log('Response data:', data);
+    } catch (jsonError) {
+        console.error('JSON PARSE FAILED:', jsonError);
+        const text = await response.text();
+        console.error('Response text:', text);
+        throw new Error('Invalid JSON response from backend');
+    }
     
     if (data.error) {
+        console.error('Backend returned error:', data);
         throw new Error(data.error_description || data.error);
     }
     
