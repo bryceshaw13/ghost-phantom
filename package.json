@@ -1,0 +1,23 @@
+{
+  "name": "ghost-phantom-tiktok-demo",
+  "version": "1.0.0",
+  "description": "Ghost-Phantom TikTok OAuth and Content Posting API demo",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "deploy:backend": "vercel --prod",
+    "deploy:frontend": "git push origin main"
+  },
+  "keywords": [
+    "tiktok",
+    "oauth",
+    "content-posting-api",
+    "ghost-phantom",
+    "openclaw"
+  ],
+  "author": "Bryce Shaw",
+  "license": "MIT",
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  }
+}
