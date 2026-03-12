@@ -133,11 +133,19 @@ async function exchangeCodeForToken(code) {
         throw new Error('Invalid JSON response from backend');
     }
     
-    if (data.error) {
+    // Check for actual errors (not TikTok's success response with error.code='ok')
+    if (data.error && typeof data.error === 'string') {
+        // OAuth error format: {error: "invalid_grant", error_description: "..."}
         console.error('Backend returned error:', data);
         const errorMessage = data.error_description || data.error || 'Unknown backend error';
         console.error('Throwing error with message:', errorMessage);
         throw new Error(errorMessage);
+    }
+    
+    if (data.error && data.error.code && data.error.code !== 'ok') {
+        // TikTok error format: {error: {code: "...", message: "..."}}
+        console.error('Backend returned TikTok API error:', data.error);
+        throw new Error(data.error.message || data.error.code);
     }
     
     if (!response.ok) {
@@ -206,9 +214,13 @@ async function fetchUserInfo() {
         throw new Error('Invalid JSON response from TikTok user info API');
     }
     
-    if (data.error) {
+    if (data.error && data.error.code !== 'ok') {
         console.error('TikTok user info API error:', data.error);
         throw new Error(data.error.message || data.error.code || 'User info fetch failed');
+    }
+    
+    if (data.error && data.error.code === 'ok') {
+        console.log('✓ TikTok API success (error.code = "ok")');
     }
     
     if (!data.data || !data.data.user) {
