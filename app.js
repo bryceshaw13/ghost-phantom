@@ -145,9 +145,17 @@ async function exchangeCodeForToken(code) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
+    console.log('Token exchange successful! Setting access token...');
     accessToken = data.access_token;
+    console.log('Access token set:', !!accessToken);
+    
+    if (!accessToken) {
+        console.error('Backend response missing access_token:', data);
+        throw new Error('Backend did not return an access token');
+    }
     
     // Fetch user info
+    console.log('Proceeding to fetch user info...');
     await fetchUserInfo();
     
     // Update UI
@@ -168,20 +176,48 @@ async function exchangeCodeForToken(code) {
  * Fetch TikTok user information
  */
 async function fetchUserInfo() {
-    const response = await fetch(`${CONFIG.API_BASE}/v2/user/info/?fields=open_id,union_id,avatar_url,display_name`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-        }
-    });
+    console.log('=== Fetching User Info ===');
+    console.log('Access token:', accessToken ? accessToken.substring(0, 20) + '...' : 'MISSING');
+    console.log('API URL:', `${CONFIG.API_BASE}/v2/user/info/?fields=open_id,union_id,avatar_url,display_name`);
     
-    const data = await response.json();
+    let response;
+    try {
+        response = await fetch(`${CONFIG.API_BASE}/v2/user/info/?fields=open_id,union_id,avatar_url,display_name`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        console.log('User info response status:', response.status);
+    } catch (fetchError) {
+        console.error('FETCH USER INFO FAILED:', fetchError);
+        throw new Error(`Failed to fetch user info: ${fetchError.message}`);
+    }
+    
+    let data;
+    try {
+        data = await response.json();
+        console.log('User info response data:', data);
+    } catch (jsonError) {
+        console.error('JSON PARSE FAILED:', jsonError);
+        const text = await response.text();
+        console.error('Response text:', text);
+        throw new Error('Invalid JSON response from TikTok user info API');
+    }
+    
     if (data.error) {
-        throw new Error(data.error.message);
+        console.error('TikTok user info API error:', data.error);
+        throw new Error(data.error.message || data.error.code || 'User info fetch failed');
+    }
+    
+    if (!data.data || !data.data.user) {
+        console.error('Unexpected response structure:', data);
+        throw new Error('Invalid response structure from TikTok');
     }
     
     userData = data.data.user;
+    console.log('✓ User info fetched successfully:', userData);
 }
 
 /**
