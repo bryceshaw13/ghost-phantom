@@ -2,10 +2,20 @@
 // Deploy this to handle secure server-side token exchange
 
 export default async function handler(req, res) {
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Enable CORS for GitHub Pages domain
+    const allowedOrigins = [
+        'https://bryceshaw13.github.io',
+        'http://localhost:8000' // For local testing
+    ];
+    
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
     
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
