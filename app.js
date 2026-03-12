@@ -78,8 +78,13 @@ async function handleOAuthCallback() {
         window.history.replaceState({}, document.title, window.location.pathname);
         
     } catch (error) {
-        showStatus('loginStatus', `Token exchange failed: ${error.message}`, 'error');
-        console.error('Token exchange error:', error);
+        const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+        showStatus('loginStatus', `Token exchange failed: ${errorMsg}`, 'error');
+        console.error('=== FULL ERROR DETAILS ===');
+        console.error('Error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Error string:', error.toString());
     }
 }
 
@@ -130,7 +135,14 @@ async function exchangeCodeForToken(code) {
     
     if (data.error) {
         console.error('Backend returned error:', data);
-        throw new Error(data.error_description || data.error);
+        const errorMessage = data.error_description || data.error || 'Unknown backend error';
+        console.error('Throwing error with message:', errorMessage);
+        throw new Error(errorMessage);
+    }
+    
+    if (!response.ok) {
+        console.error('Response not OK. Status:', response.status);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     accessToken = data.access_token;
