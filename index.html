@@ -222,16 +222,22 @@
             <div class="status success show">
                 Demo complete! Your video is now in TikTok drafts (sandbox mode).
             </div>
-<script>
-const CONFIG = {
-  CLIENT_KEY: 'awr0mv82a601r058',
-  BACKEND_URL: 'https://ghost-phantom-navy.vercel.app',
-  REDIRECT_URI: 'https://bryceshaw13.github.io/ghost-phantom/',
-  AUTH_URL: 'https://www.tiktok.com/v2/auth/authorize/',
-  API_BASE: 'https://open.tiktokapis.com',
-  SCOPES: ['user.info.basic', 'video.upload', 'video.publish']
-};
-</script>        </div>
+        </div>
     </div>
+    
+    <!-- Config must load BEFORE app.js -->
+    <script>
+        const CONFIG = {
+            CLIENT_KEY: 'awr0mv82a601r058',
+            BACKEND_URL: 'https://ghost-phantom-navy.vercel.app',
+            REDIRECT_URI: 'https://bryceshaw13.github.io/ghost-phantom/',
+            AUTH_URL: 'https://www.tiktok.com/v2/auth/authorize/',
+            API_BASE: 'https://open.tiktokapis.com',
+            SCOPES: ['user.info.basic', 'video.upload', 'video.publish']
+        };
+    </script>
+    
+    <!-- Load app.js AFTER config is defined -->
+    <script src="app.js"></script>
 </body>
 </html>
