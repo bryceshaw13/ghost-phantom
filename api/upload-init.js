@@ -45,11 +45,14 @@ export default async function handler(req, res) {
             });
         }
         
-        // TikTok recommends 5-10MB chunks, but requires proper calculation
-        // For small videos, use smaller chunks to ensure multiple chunks
+        // TikTok appears to require minimum 4 chunks
+        // Use smaller chunk sizes to ensure enough chunks
         let chunkSize;
-        if (video_size < 20 * 1024 * 1024) {
-            // For videos under 20MB, use 5MB chunks
+        if (video_size < 15 * 1024 * 1024) {
+            // For videos under 15MB, use 3MB chunks (ensures 4+ chunks for 11MB video)
+            chunkSize = 3 * 1024 * 1024;
+        } else if (video_size < 40 * 1024 * 1024) {
+            // For 15-40MB videos, use 5MB chunks
             chunkSize = 5 * 1024 * 1024;
         } else {
             // For larger videos, use 10MB chunks
