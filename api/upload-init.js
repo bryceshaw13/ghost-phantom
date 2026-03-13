@@ -45,21 +45,21 @@ export default async function handler(req, res) {
             });
         }
         
-        // TikTok requires: (1) minimum 4+ chunks, (2) chunk size as power of 2
-        // Use 2MB chunks (2^21 bytes) for small videos to satisfy both requirements
+        // TikTok's documented approach for videos <64MB: single-chunk upload
+        // "Set video_size and chunk_size to your video file's size and total_chunk_count to 1"
+        // Reference: https://developers.tiktok.com/bulletin/migration-notice-share-video-api/
         let chunkSize;
-        if (video_size < 20 * 1024 * 1024) {
-            // For videos under 20MB, use 2MB chunks (power of 2, ensures 4+ chunks)
-            chunkSize = 2 * 1024 * 1024;
-        } else if (video_size < 64 * 1024 * 1024) {
-            // For 20-64MB videos, use 8MB chunks (power of 2)
-            chunkSize = 8 * 1024 * 1024;
-        } else {
-            // For larger videos, use 16MB chunks (power of 2)
-            chunkSize = 16 * 1024 * 1024;
-        }
+        let totalChunks;
         
-        const totalChunks = Math.ceil(video_size / chunkSize);
+        if (video_size < 64 * 1024 * 1024) {
+            // For videos under 64MB, use single-chunk upload (TikTok recommended)
+            chunkSize = video_size;
+            totalChunks = 1;
+        } else {
+            // For larger videos, use 10MB chunks
+            chunkSize = 10 * 1024 * 1024;
+            totalChunks = Math.ceil(video_size / chunkSize);
+        }
         
         console.log('Initializing TikTok video upload...');
         console.log('Video size:', video_size, 'bytes', `(${(video_size / 1024 / 1024).toFixed(2)} MB)`);
