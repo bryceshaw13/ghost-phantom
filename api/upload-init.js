@@ -66,21 +66,14 @@ export default async function handler(req, res) {
         console.log('Chunk size:', chunkSize, 'bytes', `(${(chunkSize / 1024 / 1024).toFixed(2)} MB)`);
         console.log('Total chunks:', totalChunks);
         
-        const response = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+        // Use inbox endpoint - simpler for demos, uploads to drafts
+        const response = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${access_token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json; charset=UTF-8'
             },
             body: JSON.stringify({
-                post_info: {
-                    title: 'Demo video from Ghost-Phantom',
-                    privacy_level: 'SELF_ONLY',
-                    disable_comment: false,
-                    disable_duet: false,
-                    disable_stitch: false,
-                    video_cover_timestamp_ms: 1000
-                },
                 source_info: {
                     source: 'FILE_UPLOAD',
                     video_size: video_size,
