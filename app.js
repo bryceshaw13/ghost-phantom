@@ -300,40 +300,51 @@ async function uploadVideo() {
  * Initialize TikTok video upload
  */
 async function initializeUpload() {
+    console.log('=== Initializing Upload ===');
     const chunkSize = 10 * 1024 * 1024; // 10MB chunks (TikTok recommendation)
     const totalChunks = Math.ceil(selectedFile.size / chunkSize);
     
-    const response = await fetch(`${CONFIG.API_BASE}/v2/post/publish/video/init/`, {
+    console.log('Video size:', selectedFile.size, 'bytes');
+    console.log('Chunk size:', chunkSize, 'bytes');
+    console.log('Total chunks:', totalChunks);
+    
+    const backendUrl = CONFIG.BACKEND_URL || 'https://ghost-phantom-navy.vercel.app';
+    console.log('Calling backend:', `${backendUrl}/api/upload-init`);
+    
+    const response = await fetch(`${backendUrl}/api/upload-init`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            post_info: {
-                title: 'Demo video from Ghost-Phantom',
-                privacy_level: 'SELF_ONLY', // Draft mode - appears in drafts inbox
-                disable_comment: false,
-                disable_duet: false,
-                disable_stitch: false,
-                video_cover_timestamp_ms: 1000
-            },
-            source_info: {
-                source: 'FILE_UPLOAD',
-                video_size: selectedFile.size,
-                chunk_size: chunkSize,
-                total_chunk_count: totalChunks
-            }
+            access_token: accessToken,
+            video_size: selectedFile.size,
+            chunk_size: chunkSize,
+            total_chunk_count: totalChunks
         })
     });
     
+    console.log('Upload init response status:', response.status);
     const data = await response.json();
+    console.log('Upload init response data:', data);
     
     if (data.error) {
-        throw new Error(data.error.message);
+        console.error('Upload init error:', data);
+        throw new Error(data.error_description || data.error);
     }
     
-    return data.data;
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    console.log('✓ Upload initialized');
+    console.log('Publish ID:', data.publish_id);
+    console.log('Upload URL:', data.upload_url);
+    
+    return {
+        publish_id: data.publish_id,
+        upload_url: data.upload_url
+    };
 }
 
 /**
@@ -367,34 +378,46 @@ async function uploadVideoChunks(uploadUrl) {
  * Publish video to TikTok drafts
  */
 async function publishVideo(publishId) {
+    console.log('=== Publishing Video ===');
+    console.log('Publish ID:', publishId);
+    
+    const backendUrl = CONFIG.BACKEND_URL || 'https://ghost-phantom-navy.vercel.app';
+    
     // Poll for upload completion
     let maxAttempts = 30;
     let attempt = 0;
     
     while (attempt < maxAttempts) {
-        const response = await fetch(`${CONFIG.API_BASE}/v2/post/publish/status/fetch/`, {
+        console.log(`Status check attempt ${attempt + 1}/${maxAttempts}`);
+        
+        const response = await fetch(`${backendUrl}/api/upload-status`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                access_token: accessToken,
                 publish_id: publishId
             })
         });
         
         const data = await response.json();
+        console.log('Status response:', data);
         
         if (data.error) {
-            throw new Error(data.error.message);
+            console.error('Status check error:', data);
+            throw new Error(data.error_description || data.error);
         }
         
-        const status = data.data.status;
+        const status = data.status;
+        console.log('Upload status:', status);
         
         if (status === 'PUBLISH_COMPLETE') {
+            console.log('✓ Upload complete!');
             return; // Success!
         } else if (status === 'FAILED') {
-            throw new Error('Video upload failed on TikTok servers');
+            console.error('Upload failed. Reason:', data.fail_reason);
+            throw new Error(`Video upload failed: ${data.fail_reason || 'Unknown reason'}`);
         }
         
         // Still processing, wait and retry
@@ -403,6 +426,7 @@ async function publishVideo(publishId) {
         attempt++;
     }
     
+    console.error('Upload timeout after', maxAttempts, 'attempts');
     throw new Error('Upload timeout - check TikTok Creator Studio for status');
 }
 
