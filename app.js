@@ -280,7 +280,7 @@ async function uploadVideo() {
         const initResponse = await initializeUpload();
         
         // Step 2: Upload video chunks
-        await uploadVideoChunks(initResponse.upload_url);
+        await uploadVideoChunks(initResponse.upload_url, initResponse.chunk_size);
         
         // Step 3: Publish to drafts
         await publishVideo(initResponse.publish_id);
@@ -301,16 +301,12 @@ async function uploadVideo() {
  */
 async function initializeUpload() {
     console.log('=== Initializing Upload ===');
-    const chunkSize = 10 * 1024 * 1024; // 10MB chunks (TikTok recommendation)
-    const totalChunks = Math.ceil(selectedFile.size / chunkSize);
-    
-    console.log('Video size:', selectedFile.size, 'bytes');
-    console.log('Chunk size:', chunkSize, 'bytes');
-    console.log('Total chunks:', totalChunks);
+    console.log('Video size:', selectedFile.size, 'bytes', `(${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)`);
     
     const backendUrl = CONFIG.BACKEND_URL || 'https://ghost-phantom-navy.vercel.app';
     console.log('Calling backend:', `${backendUrl}/api/upload-init`);
     
+    // Backend will calculate appropriate chunk size based on video size
     const response = await fetch(`${backendUrl}/api/upload-init`, {
         method: 'POST',
         headers: {
@@ -318,9 +314,7 @@ async function initializeUpload() {
         },
         body: JSON.stringify({
             access_token: accessToken,
-            video_size: selectedFile.size,
-            chunk_size: chunkSize,
-            total_chunk_count: totalChunks
+            video_size: selectedFile.size
         })
     });
     
@@ -340,26 +334,34 @@ async function initializeUpload() {
     console.log('✓ Upload initialized');
     console.log('Publish ID:', data.publish_id);
     console.log('Upload URL:', data.upload_url);
+    console.log('Chunk size:', data.chunk_size, 'bytes');
     
     return {
         publish_id: data.publish_id,
-        upload_url: data.upload_url
+        upload_url: data.upload_url,
+        chunk_size: data.chunk_size
     };
 }
 
 /**
  * Upload video in chunks
  */
-async function uploadVideoChunks(uploadUrl) {
-    const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+async function uploadVideoChunks(uploadUrl, chunkSize) {
+    console.log('=== Uploading Video Chunks ===');
+    console.log('Upload URL:', uploadUrl);
+    console.log('Chunk size:', chunkSize, 'bytes');
+    
     const totalChunks = Math.ceil(selectedFile.size / chunkSize);
+    console.log('Total chunks to upload:', totalChunks);
     
     for (let i = 0; i < totalChunks; i++) {
         const start = i * chunkSize;
         const end = Math.min(start + chunkSize, selectedFile.size);
         const chunk = selectedFile.slice(start, end);
         
-        await fetch(uploadUrl, {
+        console.log(`Uploading chunk ${i + 1}/${totalChunks}: bytes ${start}-${end - 1}/${selectedFile.size}`);
+        
+        const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
             headers: {
                 'Content-Range': `bytes ${start}-${end - 1}/${selectedFile.size}`,
@@ -368,10 +370,18 @@ async function uploadVideoChunks(uploadUrl) {
             body: chunk
         });
         
+        console.log(`Chunk ${i + 1} upload response:`, uploadResponse.status, uploadResponse.statusText);
+        
+        if (!uploadResponse.ok) {
+            throw new Error(`Chunk upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        }
+        
         // Update progress
         const progress = Math.round(((i + 1) / totalChunks) * 100);
         showStatus('uploadStatus', `Uploading... ${progress}%`, '');
     }
+    
+    console.log('✓ All chunks uploaded successfully');
 }
 
 /**

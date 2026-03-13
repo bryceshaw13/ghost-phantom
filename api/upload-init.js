@@ -45,12 +45,22 @@ export default async function handler(req, res) {
             });
         }
         
-        const chunkSize = chunk_size || 10 * 1024 * 1024; // 10MB default
-        const totalChunks = total_chunk_count || Math.ceil(video_size / chunkSize);
+        // TikTok recommends 5-10MB chunks, but requires proper calculation
+        // For small videos, use smaller chunks to ensure multiple chunks
+        let chunkSize;
+        if (video_size < 20 * 1024 * 1024) {
+            // For videos under 20MB, use 5MB chunks
+            chunkSize = 5 * 1024 * 1024;
+        } else {
+            // For larger videos, use 10MB chunks
+            chunkSize = 10 * 1024 * 1024;
+        }
+        
+        const totalChunks = Math.ceil(video_size / chunkSize);
         
         console.log('Initializing TikTok video upload...');
-        console.log('Video size:', video_size, 'bytes');
-        console.log('Chunk size:', chunkSize, 'bytes');
+        console.log('Video size:', video_size, 'bytes', `(${(video_size / 1024 / 1024).toFixed(2)} MB)`);
+        console.log('Chunk size:', chunkSize, 'bytes', `(${(chunkSize / 1024 / 1024).toFixed(2)} MB)`);
         console.log('Total chunks:', totalChunks);
         
         const response = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
@@ -93,7 +103,8 @@ export default async function handler(req, res) {
         console.log('✓ Upload initialized successfully');
         res.status(200).json({
             publish_id: data.data.publish_id,
-            upload_url: data.data.upload_url
+            upload_url: data.data.upload_url,
+            chunk_size: chunkSize // Return chunk size so frontend knows how to split
         });
         
     } catch (error) {
