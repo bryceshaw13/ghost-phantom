@@ -45,18 +45,18 @@ export default async function handler(req, res) {
             });
         }
         
-        // TikTok appears to require minimum 4 chunks
-        // Use smaller chunk sizes to ensure enough chunks
+        // TikTok requires: (1) minimum 4+ chunks, (2) chunk size as power of 2
+        // Use 2MB chunks (2^21 bytes) for small videos to satisfy both requirements
         let chunkSize;
-        if (video_size < 15 * 1024 * 1024) {
-            // For videos under 15MB, use 3MB chunks (ensures 4+ chunks for 11MB video)
-            chunkSize = 3 * 1024 * 1024;
-        } else if (video_size < 40 * 1024 * 1024) {
-            // For 15-40MB videos, use 5MB chunks
-            chunkSize = 5 * 1024 * 1024;
+        if (video_size < 20 * 1024 * 1024) {
+            // For videos under 20MB, use 2MB chunks (power of 2, ensures 4+ chunks)
+            chunkSize = 2 * 1024 * 1024;
+        } else if (video_size < 64 * 1024 * 1024) {
+            // For 20-64MB videos, use 8MB chunks (power of 2)
+            chunkSize = 8 * 1024 * 1024;
         } else {
-            // For larger videos, use 10MB chunks
-            chunkSize = 10 * 1024 * 1024;
+            // For larger videos, use 16MB chunks (power of 2)
+            chunkSize = 16 * 1024 * 1024;
         }
         
         const totalChunks = Math.ceil(video_size / chunkSize);
